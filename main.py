@@ -96,22 +96,32 @@ def isint(num):
     except ValueError:
         return False
 
-def checkFilename(name):
-	try:
-	    f = open(name);
-	    f.close()
-	    # Do something with the file
-	except IOError:
-	    return False;
+def help():
+	print('''Usage: python main.py input file [output file] [options]
 
-	return True;
+Options:
+	-v or --verbose       enable verbose output
+	-c or --colored       make characters colored
+	-u or --unicode       use unicode characters instead of ascii 
+	-o or --output-txt    create text file 'output.txt' with characters
+
+	-s [float] or --scale [float]             set source image scaling (default value: 100 or one character for any pixel)
+	
+	-f [integer] or --font-size [integer]     set font size (default value: 16)
+	
+	-p [float] or --padding [float]           set characters padding from right and bottom (distance between characters). Default value: 0. Can take negative values.
+	
+	-pr [float] or --padding-right [float]    set characters padding only from right. Default value: 0. Can take negative values.
+	
+	-pb [float] or --padding-bottom [float]   set characters padding only from bottom. Default value: 0. Can take negative values.'''
+);
 
 def main():
 	argv = sys.argv[1:];
 	argc = len(argv);
 
 	if '--help' in argv or '-h' in argv:
-		print('Help!');
+		help();
 		exit();
 
 	if argc < 1:
@@ -124,7 +134,7 @@ def main():
 		converter.srcImage = Image.open(argv[0]);
 
 	if argc >= 2:
-		if checkFilename(argv[1]):
+		if argv[1][0] != '-':
 			converter.outputFilename = argv[1];
 
 		if '--verbose' in argv or '-v' in argv:
@@ -175,7 +185,6 @@ def main():
 				else:
 					converter.paddingRight = float(argv[i+1]);
 					converter.paddingBottom = float(argv[i+1]);
-
 
 	converter.convert();
 
