@@ -9,7 +9,8 @@ Simple CLI program for converting images to images from characters (ASCII or Uni
 * Add some comments
 * Add custom font selection
 * Bug fixes
-* Add help text
+* Add inverting feature
+* Other improvements
 * Rewrite code in another language (e.g. C++)
 
 ## Usage
