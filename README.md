@@ -2,7 +2,7 @@
 
 Simple CLI program for converting images to images from characters (ASCII or Unicode). See examples below.
 
-## Requirements:
+## Requirements
 * [Pillow](https://pypi.org/project/Pillow/)
 
 ## TODO:
