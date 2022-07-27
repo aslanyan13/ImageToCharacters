@@ -1,100 +1,95 @@
+from multiprocessing.sharedctypes import Value
 from PIL import Image, ImageDraw, ImageFont
-import sys
+import argparse
+import os
 
-asciiChars = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI;:,\"^`'. ";
-unicodeChars = "M@¶WØÆÑæ®%Õ&ÔBQNÐ¾ÓÒmÖ©þDÛÃßÂg#wRÊOÅHÚÙ8ÜÁÀGðÄÉÈp$bË¼øãqdKâåê½U¥õA§9ûô06Eñ£4áàPÇéÞèµýäëZhúXóùòküöV5S3Ýaey2FuoÎCnY±ÍÌç][TÏxf7¢¤zs}vLI{tJj1*)|c¿?×(î»«l=+írì<>^³ï\\/÷i¦¡²!ª°¬º\"¯~;_¹:¸,\'\xad-´`·.¨\xa0 ";
-programDir = __file__[:__file__.rindex('/') + 1];
+ascii_chars = "$@B%8&WM#*oahkbdpqwmZO0QLCJUYXzcvunxrjft/\\|()1{}[]?-_+~<>i!lI:,\"^`'. "
+unicode_chars = "M@¶WØÆÑæ®%Õ&ÔBQNÐ¾ÓÒmÖ©þDÛÃßÂg#wRÊOÅHÚÙ8ÜÁÀGðÄÉÈp$bË¼øãqdKâåê½U¥õA§9ûô06Eñ£4áàPÇéÞèµýäëZhúXóùòküöV5S3Ýaey2FuoÎCnY±ÍÌç][TÏxf7¢¤zs}vLI{tJj1*)|c¿?×(î»«l=+írì<>^³ï\\/÷i¦¡²!ª°¬º\"¯~_¹:¸,\'\xad-´`·.¨\xa0 "
+
+program_dir = os.path.dirname(os.path.realpath(__file__)) + '/'
 
 class Converter:
 	def __init__(self):
-		self.verbose = False;
-		self.writeTxt = False;
-		self.invert = False;
-		self.colored = False;
+		self.verbose = False
+		self.invert = False
+		self.colored = False
 
-		self.srcImage = None;
-		self.inputFilename = '';
-		self.outputFilename = '';
-		self.paddingRight = 0;
-		self.paddingBottom = 0;
-		self.chars = asciiChars;
+		self.src_image = None
+		self.input_file = ''
+		self.output_file = ''
+		self.padding_right = 0
+		self.padding_bottom = 0
+		self.chars = ascii_chars
 
-		self.fontSize = 16;
-		self.scale = 100;
+		self.font_size = 16
+		self.scale = 100
 
-	def getOutputFilename(self):
-		dot = self.inputFilename.rindex('.');
-		ext = self.inputFilename[dot:];
-		name = self.inputFilename[:dot];
+	def get_output_filename(self):
+		dot = self.input_file.rindex('.')
+		ext = self.input_file[dot:]
+		name = self.input_file[:dot]
 
-		self.outputFilename = name + '_chars' + ext;
+		return name + '_chars' + ext
+
+	def load_from_args(self, args):
+		self.input_file = args['input-file']
+		self.output_file = args['output-file'] or self.get_output_filename()
+		self.verbose = args['verbose']
+		self.colored = args['colored']
+		self.chars = unicode_chars if args['unicode'] else ascii_chars
+		self.scale = args['scale'] / 100.0
+		self.padding_bottom = self.padding_right = args['padding']
+		self.padding_bottom = args['padding_bottom'] or self.padding_bottom
+		self.padding_right = args['padding_right'] or self.padding_right
 
 	def convert(self):
-		if self.outputFilename == '':
-			self.getOutputFilename();
+		print('Saving to file: ' + self.output_file)
 
-		print('Saving to file: ' + self.outputFilename);
+		self.src_image = Image.open(self.input_file)
 
-		if self.writeTxt:
-			txt = open('output.txt', 'w');
+		blockW = int(self.font_size + self.font_size * (self.padding_right / 100))
+		blockH = int(self.font_size + self.font_size * (self.padding_bottom / 100))
 
-		blockW = int(self.fontSize + self.fontSize * (self.paddingRight / 100));
-		blockH = int(self.fontSize + self.fontSize * (self.paddingBottom / 100));
-
-		self.srcImage.thumbnail((self.srcImage.width * self.scale, self.srcImage.height * self.scale), Image.ANTIALIAS);
-		font = ImageFont.truetype(programDir + 'monospace.ttf', self.fontSize);
+		self.src_image.thumbnail((self.src_image.width * self.scale, self.src_image.height * self.scale), Image.ANTIALIAS)
+		font = ImageFont.truetype(program_dir + 'monospace.ttf', self.font_size)
 
 		if self.colored:
-			outputImage = Image.new('RGB', (self.srcImage.width * blockW, self.srcImage.height * blockH), (255, 255, 255));
+			output_image = Image.new('RGB', (self.src_image.width * blockW, self.src_image.height * blockH), (255, 255, 255))
 		else:
-			self.srcImage = self.srcImage.convert('L');
-			outputImage = Image.new('L', (self.srcImage.width * blockW, self.srcImage.height * blockH), 255);
+			self.src_image = self.src_image.convert('L')
+			output_image = Image.new('L', (self.src_image.width * blockW, self.src_image.height * blockH), 255)
 
-		draw = ImageDraw.Draw(outputImage);
+		draw = ImageDraw.Draw(output_image)
 
-		full = self.srcImage.width * self.srcImage.height;
+		full = self.src_image.width * self.src_image.height
 
-		for i in range(self.srcImage.height):
-			for j in range(self.srcImage.width):
-				col = self.srcImage.getpixel((j, i));
+		for i in range(self.src_image.height):
+			for j in range(self.src_image.width):
+				col = self.src_image.getpixel((j, i))
 
-				avg = col;
+				avg = col
 				if self.colored:
-					avg = (col[0] + col[1] + col[2]) / 3;
+					avg = (col[0] + col[1] + col[2]) / 3
 
-				index = int((len(self.chars) - 1) * (avg / 255.0)); 
+				index = int((len(self.chars) - 1) * (avg / 255.0)) 
 
-				current = i * self.srcImage.width + j + 1;
-				percent = int(current / full * 100);
+				current = i * self.src_image.width + j + 1
+				percent = int(current / full * 100)
 
 				if self.verbose:
-					print('\r', end='');
-					print('Processing: ' + str(percent) + '%', end='');
-
-				if self.writeTxt:
-					txt.write(self.chars[index]);
+					print('\r', end='')
+					print('Processing: ' + str(percent) + '%', end='')
 				
-				draw.text((j * blockW, i * blockH), self.chars[index], font=font, fill=col);
-			
-			if self.writeTxt:
-				txt.write('\n');
+				draw.text((j * blockW, i * blockH), self.chars[index], font=font, fill=col)
 
-		print();
-		outputImage.save(self.outputFilename);
+		print()
+		output_image.save(self.output_file)
 
-def isfloat(num):
-    try:
-        float(num)
-        return True
-    except ValueError:
-        return False
-
-def isint(num):
-    try:
-        int(num)
-        return True
-    except ValueError:
-        return False
+def scale_arg_type(val):
+	val = float(val)
+	if val <= 0:
+		raise argparse.ArgumentTypeError("Scale must be positive value")
+	return val
 
 def help():
 	print('''Usage: python main.py input file [output file] [options]
@@ -103,7 +98,6 @@ Options:
 	-v or --verbose       enable verbose output
 	-c or --colored       make characters colored
 	-u or --unicode       use unicode characters instead of ascii 
-	-o or --output-txt    create text file 'output.txt' with characters
 
 	-s [float] or --scale [float]             set source image scaling (default value: 100 or one character for any pixel)
 	
@@ -114,79 +108,26 @@ Options:
 	-pr [float] or --padding-right [float]    set characters padding only from right. Default value: 0. Can take negative values.
 	
 	-pb [float] or --padding-bottom [float]   set characters padding only from bottom. Default value: 0. Can take negative values.'''
-);
+)
 
 def main():
-	argv = sys.argv[1:];
-	argc = len(argv);
+	parser = argparse.ArgumentParser()
+	parser.add_argument('input-file', metavar='input file')
+	parser.add_argument('output-file', metavar='output file', nargs='?', default=None)
+	parser.add_argument('-v', '--verbose', action='store_true')
+	parser.add_argument('-c', '--colored', action='store_true')
+	parser.add_argument('-u', '--unicode', action='store_true')
+	parser.add_argument('-s', '--scale', type=scale_arg_type, nargs='?', default=100)
+	parser.add_argument('-f', '--font-size', type=int, nargs='?', default=16)
+	parser.add_argument('-p', '--padding', type=float, nargs='?', default=0)
+	parser.add_argument('-pr', '--padding-right', type=float, nargs='?', default=None)
+	parser.add_argument('-pb', '--padding-bottom', type=float, nargs='?', default=None)
 
-	if '--help' in argv or '-h' in argv:
-		help();
-		exit();
+	args = vars(parser.parse_args())
 
-	if argc < 1:
-		print("Error!")
-		exit();
-
-	converter = Converter();
-	if argc >= 1:
-		converter.inputFilename = argv[0];
-		converter.srcImage = Image.open(argv[0]);
-
-	if argc >= 2:
-		if argv[1][0] != '-':
-			converter.outputFilename = argv[1];
-
-		if '--verbose' in argv or '-v' in argv:
-			converter.verbose = True;
-		if '--output-txt' in argv or '-o' in argv:
-			converter.writeTxt = True;
-		if '--invert' in argv or '-i' in argv:
-			converter.invert = True;
-		if '--colored' in argv or '-c' in argv:
-			converter.colored = True;
-		if '--unicode' in argv or '-u' in argv:
-			converter.chars = unicodeChars;
-
-		for i in range(argc):
-
-			if argv[i] == '--scale' or argv[i] == '-s':
-				if i == (argc - 1) or not isfloat(argv[i + 1]):
-					print('Error!');
-					exit();
-				else:
-					converter.scale = float(argv[i+1]) / 100.0;
-
-			if argv[i] == '--font-size' or argv[i] == '-f':
-				if i == (argc - 1) or not isint(argv[i + 1]):
-					print('Error!');
-					exit();
-				else:
-					converter.fontSize = int(argv[i+1]);
-
-			if argv[i] == '--padding-right' or argv[i] == '-pr':
-				if i == (argc - 1) or not isfloat(argv[i + 1]):
-					print('Error!');
-					exit();
-				else:
-					converter.paddingRight = float(argv[i+1]);
-
-			if argv[i] == '--padding-bottom' or argv[i] == '-pb':
-				if i == (argc - 1) or not isfloat(argv[i + 1]):
-					print('Error!');
-					exit();
-				else:
-					converter.paddingBottom = float(argv[i+1]);
-
-			if argv[i] == '--padding' or argv[i] == '-p':
-				if i == (argc - 1) or not isfloat(argv[i + 1]):
-					print('Error!');
-					exit();
-				else:
-					converter.paddingRight = float(argv[i+1]);
-					converter.paddingBottom = float(argv[i+1]);
-
-	converter.convert();
+	converter = Converter()
+	converter.load_from_args(args)
+	converter.convert()
 
 if __name__ == '__main__':
 	main()
